@@ -2,6 +2,10 @@ import pandas as pd
 
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
+import seaborn as sns
+from sklearn.linear_model import LinearRegression
+from sklearn.metrics import r2_score, mean_absolute_error
+import numpy as np
 
 # ── 1. Load BDI ──────────────────────────────────────────
 bdi       = pd.read_csv("/Users/lunga_2.0/freight-analysis/data/BDI.csv")
@@ -68,6 +72,11 @@ plt.show()
 print("\n=== Correlation Matrix ===")
 print(df[["Freight_Rate", "Oil_Price", "Trade_Volume"]].corr().round(3))
 
+#-----2.1.  Plotting the co-relation heatmap
+plt.figure(figsize=(10,10))
+sns.heatmap(df.corr(),annot=True,cmap='coolwarm')
+plt.show()
+
 # ── 3. Scatter Plots ──────────────────────────────────────
 fig, axes = plt.subplots(1, 2, figsize=(12, 5))
 fig.suptitle("Freight Rate vs Drivers", fontsize=14)
@@ -86,9 +95,7 @@ plt.tight_layout()
 plt.savefig("/Users/lunga_2.0/freight-analysis/plots/scatter.png", dpi=150)
 plt.show()
 
-from sklearn.linear_model import LinearRegression
-from sklearn.metrics import r2_score, mean_absolute_error
-import numpy as np
+# ── 4. Regression model ──────────────────────────────────
 
 # ── Features and target ──────────────────────────────────
 X = df[["Oil_Price", "Trade_Volume"]]
@@ -123,3 +130,57 @@ plt.grid(True, alpha=0.3)
 plt.tight_layout()
 plt.savefig("/Users/lunga_2.0/freight-analysis/plots/regression.png", dpi=150)
 plt.show()
+
+# ── Lagged Variables ──────────────────────────────────────
+df["Oil_Lag1"] = df["Oil_Price"].shift(1)   # oil price 1 month ago
+df["Oil_Lag2"] = df["Oil_Price"].shift(2)   # oil price 2 months ago
+
+# Drop NaN rows created by shifting
+df_lag = df.dropna()
+
+# ── Advanced Model ────────────────────────────────────────
+X_lag = df_lag[["Oil_Price", "Trade_Volume", "Oil_Lag1", "Oil_Lag2"]]
+y_lag = df_lag["Freight_Rate"]
+
+model_lag = LinearRegression()
+model_lag.fit(X_lag, y_lag)
+
+# ── Results ───────────────────────────────────────────────
+df_lag = df_lag.copy()
+df_lag["Predicted_Lag"] = model_lag.predict(X_lag)
+r2_lag  = r2_score(y_lag, df_lag["Predicted_Lag"])
+mae_lag = mean_absolute_error(y_lag, df_lag["Predicted_Lag"])
+
+print("=== Advanced Model (with Lagged Variables) ===")
+print(f"Intercept:        {model_lag.intercept_:.2f}")
+print(f"β1 Oil Price:     {model_lag.coef_[0]:.4f}")
+print(f"β2 Trade Volume:  {model_lag.coef_[1]:.6e}")
+print(f"β3 Oil Lag 1M:    {model_lag.coef_[2]:.4f}")
+print(f"β4 Oil Lag 2M:    {model_lag.coef_[3]:.4f}")
+print(f"\nR² Score:         {r2_lag:.3f}")
+print(f"MAE:              {mae_lag:.2f}")
+
+plt.figure(figsize=(12, 5))
+
+# Actual (full)
+plt.plot(df["Date"], df["Freight_Rate"],label="Actual", color="steelblue")
+
+# Baseline prediction (full)
+plt.plot(df["Date"], df["Predicted"],label="Baseline", color="red", linestyle="--")
+
+# Advanced model prediction (aligned dates)
+plt.plot(df_lag["Date"], df_lag["Predicted_Lag"],label="Advanced (Lagged)", color="green", linestyle="--")
+
+plt.title("Actual vs Predicted Freight Rate (Baseline vs Advanced)")
+plt.ylabel("Freight Rate")
+plt.xlabel("Date")
+plt.legend()
+plt.grid(True, alpha=0.3)
+plt.tight_layout()
+plt.savefig("/Users/lunga_2.0/freight-analysis/plots/regression_advanced.png", dpi=150)
+plt.show()
+# ── Compare both models ───────────────────────────────────
+print("\n=== Model Comparison ===")
+print(f"Baseline R²:      {r2:.3f}")
+print(f"Advanced R²:      {r2_lag:.3f}")
+print(f"Improvement:      +{r2_lag - r2:.3f}")
