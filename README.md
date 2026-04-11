@@ -43,11 +43,7 @@ freight-analysis/
 | Dataset | Source | Frequency | Period |
 |---|---|---|---|
 | Baltic Dry Index (Capesize) | Baltic Exchange | Daily | 2012–2019 |
-<<<<<<< HEAD
 | Brent Crude Oil Prices | Kaggle | Daily | 2012–2019 |
-=======
-| Brent Crude Oil Prices |  Kaggle | Daily | 2012–2019 |
->>>>>>> 91e1eb9 (Removed git ignore)
 | Global Trade Volume | World Bank | Yearly | 2012–2019 |
 | Bulk Carrier Fleet (DWT) | UNCTAD | Yearly | 2012–2019 |
 
